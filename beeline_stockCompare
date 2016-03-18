@@ -1,0 +1,69 @@
+import pandas as pd
+import pandas.io.data as web
+import datetime
+
+start = datetime.datetime(2015,1,1)
+end = datetime.datetime(2016,1,1)
+
+
+df_ibm = web.DataReader("ibm", 'yahoo', start, end)
+df_google = web.DataReader("goog", 'yahoo', start, end)
+
+df_ibm.to_csv('/home/user/shutan/ibm.csv')
+df_google.to_csv('/home/user/shutan/google.csv')
+
+ssh -p 49233 shutan@rm.neutronmobile.com
+
+hdfs dfs -put /home/user/shutan/ibm.csv /user/shutan/beeline
+hdfs dfs -put /home/user/shutan/google.csv /user/shutan/beeline
+
+
+beeline
+!connect jdbc:hive2://192.168.1.13:10000/default
+
+
+create database shutan_test;
+
+
+create table ibm (day string, open int, high int, low int, close int, volumn bigint, adjclose int) ROW FORMAT delimited fields terminated by ',' stored as textfile;
+load data inpath 'hdfs://master1.nmobile.local:8020/user/shutan/beeline/ibm.csv' overwrite into table ibm;
+
+create table google (day string, open int, high int, low int, close int, volumn bigint, adjclose int) ROW FORMAT delimited fields terminated by ',' stored as textfile;
+load data inpath 'hdfs://master1.nmobile.local:8020/user/shutan/beeline/google.csv' overwrite into table google;
+
+ 
+
+select close, count(close) as count from ibm
+group by close
+ORDER BY count DESC
+limit 10;
+
+
+
+create table join_table (day string, high1 int, low1 int, high2 int, low2 int);
+
+insert into join_table
+select ibm.day, ibm.high, ibm.low, google.high, google.low
+from ibm
+inner join google
+on ibm.day = google.day;
+
+
+
+
+select * from join_table
+where (high1 - low1) > (high2 - low2);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
